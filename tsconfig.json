@@ -1,0 +1,39 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "removeComments": true,
+        "emitDecoratorMetadata": true,
+        "allowSyntheticDefaultImports": true,
+        "target": "es2017",
+        "outDir": "./dist",
+        "baseUrl": "./",
+        "incremental": true,
+        "skipLibCheck": true,
+        "strictNullChecks": false,
+        "strictBindCallApply": false,
+        "paths": {
+            "src/*": ["scr/*"],
+        },
+
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "noImplicitReturns": true,
+        "sourceMap": true,
+        "declaration": false,
+        "moduleResolution": "node",
+        "importHelpers": true,
+        "lib": [
+            "es2018",
+            "dom"
+        ],
+
+        "downlevelIteration": true,
+        "experimentalDecorators": true,
+        "strictPropertyInitialization": false,
+        "alwaysStrict": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitAny": true,
+        "noImplicitOverride": true,
+        "noUncheckedIndexedAccess": true,
+    },
+}
