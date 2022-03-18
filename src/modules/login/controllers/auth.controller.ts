@@ -4,8 +4,10 @@ import {
     Get,
     Inject,
     Post,
+    Res,
 } from '@nestjs/common';
-import {AuthDTO} from '../dto/auth';
+import {Response} from 'express';
+import {IAuthDTO} from '../dto/auth';
 
 import {AuthService} from '../services/auth.serviece';
 
@@ -26,8 +28,19 @@ export class AuthController {
 
     @Post()
     public async register(
-        @Body() body: AuthDTO,
-    ): Promise<AuthDTO> {
-        return await this.authService.register(body);
+        @Res() response: Response,
+        @Body() body: IAuthDTO,
+    ): Promise<void> {
+        const result = await this.authService.register({
+            response,
+            body,
+        });
+
+        response
+            .setHeader('Authorization', result.token)
+            .send({
+                login: result.login,
+            })
+            .end();
     }
 }

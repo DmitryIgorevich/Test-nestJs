@@ -7,10 +7,7 @@ import {
     Response,
 } from 'express';
 
-import {
-    IIndexing,
-    TKeys,
-} from '../../../../system/types';
+import {TKeys} from '../../../../system/types';
 
 import {AuthDTO} from '../../dto/auth';
 import {AuthService} from '../../services/auth.serviece';
@@ -45,16 +42,13 @@ export class RegisterRequiredMiddleWare implements NestMiddleware {
 
             return;
         }
-        console.log('next');
 
         next();
     }
 
     protected generateErrorsMessages(errors: string[]): any {
-        const res: IIndexing = {};
-        errors.forEach(item => {
-            res[item] = `Field ${item} is required`;
+        return errors.map(item => {
+            return {[item]: `Field ${item} is required`};
         });
-        return res;
     }
 }
