@@ -11,6 +11,7 @@ import {AuthController} from './controllers/auth.controller';
 import {AuthTokenMiddleWare} from './middleware/auth/auth.middleware';
 import {UserExistsMiddleWare} from './middleware/register/user-exists.middleware';
 import {RegisterRequiredMiddleWare} from './middleware/register/validator-required.middleware';
+import {AccesssTokenMiddleWare} from './middleware/access/access.middleware';
 
 import {AuthService} from './services/auth.serviece';
 
@@ -41,9 +42,16 @@ export class AuthModule implements NestModule {
 
     public configure(consumer: MiddlewareConsumer) {
         consumer
-            .apply(AuthTokenMiddleWare)
+            .apply(
+                AccesssTokenMiddleWare,
+            )
+            .forRoutes('auth')
+
+            .apply(
+                AuthTokenMiddleWare,
+            )
             .forRoutes({
-                path: 'auth',
+                path: 'auth/login',
                 method: RequestMethod.GET,
             })
 
@@ -52,7 +60,7 @@ export class AuthModule implements NestModule {
                 UserExistsMiddleWare,
             )
             .forRoutes({
-                path: 'auth',
+                path: 'auth/registration',
                 method: RequestMethod.POST,
             });
     }

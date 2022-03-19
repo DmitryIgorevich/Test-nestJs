@@ -2,11 +2,16 @@ import {
     Body,
     Controller,
     Get,
-    Inject,
     Post,
+    Req,
     Res,
 } from '@nestjs/common';
-import {Response} from 'express';
+import {
+    Request,
+    Response,
+} from 'express';
+
+import {REFRESH_TOKEN, REFRESH_TOKEN_COOCKIE} from '../../../system/app/common-coockie.names';
 import {IAuthDTO} from '../dto/auth';
 
 import {AuthService} from '../services/auth.serviece';
@@ -17,16 +22,62 @@ import {AuthService} from '../services/auth.serviece';
 export class AuthController {
 
     constructor(
-        @Inject(AuthService) private readonly authService: AuthService,
+        private readonly authService: AuthService,
     ) {
     }
 
-    @Get()
-    public async login(): Promise<any> {
+    @Post('login')
+    public async loginPost(): Promise<any> {
         return 1;
     }
 
-    @Post()
+    @Get('login')
+    public async loginGet(): Promise<any> {
+        return 1;
+    }
+
+    @Get('refresh')
+    public async refresh(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<unknown> {
+        const coockies = req.headers.cookie?.split(' ');
+        const refreshCoockie = coockies?.find(item => {
+            return item.includes(REFRESH_TOKEN_COOCKIE);
+        });
+        const refreshToken = refreshCoockie?.replace(REFRESH_TOKEN_COOCKIE, '');
+
+        if (!refreshToken) {
+            return res.status(401)
+                .send({
+                    statusCode: 401,
+                    message: ['Some error with refresh token'],
+                })
+                .end();
+        }
+
+        const user = await this.authService.refreshToken(refreshToken);
+
+        console.log(refreshToken);
+
+        if (user) {
+            return res.status(200)
+                .send({
+                    statusCode: 200,
+                    message: ['Access token is refreshed'],
+                })
+                .end();
+        }
+
+        return res.send(401)
+            .send({
+                statusCode: 401,
+                message: ['You should login again'],
+            })
+            .end();
+    }
+
+    @Post('registration')
     public async register(
         @Res() response: Response,
         @Body() body: IAuthDTO,
@@ -36,11 +87,20 @@ export class AuthController {
             body,
         });
 
-        response
-            .setHeader('Authorization', result.token)
+        response.status(201)
+            .setHeader('Authorization', result.accessToken)
+            .cookie(REFRESH_TOKEN, result.refreshToken, {
+                httpOnly: true,
+            })
             .send({
-                login: result.login,
+                statusCode: 201,
+                message: [`User ${result.login} is registered`],
             })
             .end();
+    }
+
+    @Get('test')
+    public async test(): Promise<any> {
+        return 1;
     }
 }

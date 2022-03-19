@@ -18,7 +18,10 @@ export class AuthDTO implements IAuthDTO {
     public login: string;
 
     @Prop()
-    public token: string;
+    public accessToken: string;
+
+    @Prop()
+    public refreshToken: string;
 }
 
 export const AuthSchema = SchemaFactory.createForClass(AuthDTO);

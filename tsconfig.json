@@ -9,7 +9,7 @@
         "baseUrl": "./",
         "incremental": true,
         "skipLibCheck": true,
-        "strictNullChecks": false,
+        "strictNullChecks": true,
         "strictBindCallApply": false,
         "paths": {
             "src/*": ["scr/*"],

@@ -23,7 +23,8 @@ export class UserExistsMiddleWare implements NestMiddleware {
         if (result) {
             res.status(400)
                 .send({
-                    message: `User ${data.login} is registred`,
+                    statusCode: 400,
+                    message: `User ${data.login} already is registred`,
                 })
                 .end();
 

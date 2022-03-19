@@ -21,11 +21,11 @@ export class AuthTokenMiddleWare implements NestMiddleware {
 
         if (headers.authorization) {
             const authorization = headers.authorization;
-            const result = await this.authService.checkAuthByToken(authorization);
+            const result = await this.authService.getUserByAccessToken(authorization);
 
             if (result) {
-                res.cookie('Authorization', authorization)
-                    .status(200)
+                res.status(200)
+                    .cookie('Authorization', authorization)
                     .send({
                         statusCode: 200,
                         message: 'Access is done',
