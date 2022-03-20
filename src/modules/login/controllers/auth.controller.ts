@@ -59,11 +59,6 @@ export class AuthController {
             .end();
     }
 
-    @Get('login')
-    public async loginGet(): Promise<any> {
-        return 1;
-    }
-
     @Get('refresh')
     public async refresh(
         @Req() req: Request,
