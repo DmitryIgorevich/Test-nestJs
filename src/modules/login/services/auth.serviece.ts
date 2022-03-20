@@ -5,13 +5,13 @@ import {
     Request,
     Response,
 } from 'express';
+import * as jsonwebtoken from 'jsonwebtoken';
 
 import {
     AuthDTO,
     IAuthDTO,
 } from '../dto/auth';
 import {generateJwtKey} from '../../../system/app/secret.key';
-import {decode} from 'jsonwebtoken';
 
 export interface IRequestParams<T> {
     response?: Response;
@@ -35,7 +35,7 @@ export class AuthService {
 
         const jwtRefresh = generateJwtKey<Partial<IAuthDTO>>(
             {login: body.login}, {
-                expiresIn: 1000 * 60 * 60 * 24 * 20,
+                expiresIn: 1 * 60 * 24 * 7,
             },
         );
 
@@ -66,7 +66,6 @@ export class AuthService {
         const user = await this.getUser({refreshToken});
 
         console.log('refreshToken user', user);
-
         if (!user) {
             return null;
         }
@@ -76,17 +75,17 @@ export class AuthService {
         );
         const jwtRefresh = generateJwtKey<Partial<IAuthDTO>>(
             {login: user.login}, {
-                expiresIn: 1000 * 60 * 60 * 24 * 20,
+                expiresIn: 1 * 60 * 24 * 7,
             },
         );
 
         const modifiedUser = await this.authModel.findOneAndUpdate(
             {refreshToken},
             {
-                login: 'NEW VALUE',
                 refreshToken: jwtRefresh,
                 accessToken: jwtAccess,
             },
+            {new: true},
         );
 
         console.log('refesh user', user);
@@ -94,5 +93,9 @@ export class AuthService {
         console.log(modifiedUser === user);
 
         return modifiedUser;
+    }
+
+    public checkExpiringJwtKey(decodedAccessToken: jsonwebtoken.JwtPayload): boolean {
+        return !!decodedAccessToken.exp && Date.now() / 1000 >= decodedAccessToken.exp;
     }
 }

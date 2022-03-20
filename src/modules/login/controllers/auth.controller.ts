@@ -10,11 +10,15 @@ import {
     Request,
     Response,
 } from 'express';
+import * as jsonwebtoken from 'jsonwebtoken';
 
-import {REFRESH_TOKEN, REFRESH_TOKEN_COOCKIE} from '../../../system/app/common-coockie.names';
+import {AUTHORIZATION} from '../../../system/app/common-header.names';
+import {REFRESH_TOKEN} from '../../../system/app/common-coockie.names';
 import {IAuthDTO} from '../dto/auth';
 
+import {decodeJwtKey} from '../../../system/app/secret.key';
 import {AuthService} from '../services/auth.serviece';
+import {CoockieHelper} from '../../../modules/app/helpers/coockie.helper';
 
 @Controller({
     path: 'auth',
@@ -41,27 +45,55 @@ export class AuthController {
         @Req() req: Request,
         @Res() res: Response,
     ): Promise<unknown> {
-        const coockies = req.headers.cookie?.split(' ');
-        const refreshCoockie = coockies?.find(item => {
-            return item.includes(REFRESH_TOKEN_COOCKIE);
-        });
-        const refreshToken = refreshCoockie?.replace(REFRESH_TOKEN_COOCKIE, '');
-
-        if (!refreshToken) {
-            return res.status(401)
+        if (!req.headers.cookie) {
+            return res.status(400)
                 .send({
-                    statusCode: 401,
-                    message: ['Some error with refresh token'],
+                    statusCode: 400,
+                    message: ['Refresh token not found'],
+                    error: 'Refresh token not found',
                 })
                 .end();
         }
 
-        const user = await this.authService.refreshToken(refreshToken);
+        const refreshCoockie = CoockieHelper.findCoockieBy(req.headers.cookie, REFRESH_TOKEN);
+        const refreshToken = CoockieHelper.getCoockieValue(refreshCoockie, REFRESH_TOKEN);
+        if (!refreshToken) {
+            return res.status(400)
+                .send({
+                    statusCode: 400,
+                    message: ['Refresh token not found'],
+                    error: 'Refresh token not found',
+                })
+                .end();
+        }
 
-        console.log(refreshToken);
+        const user = await this.authService.getUser({refreshToken});
+        if (!user) {
+            return res.status(400)
+                .send({
+                    statusCode: 400,
+                    message: ['User by passed refresh token not found'],
+                    error: 'User by passed refresh token not found',
+                })
+                .end();
+        }
 
-        if (user) {
+        const decodedRefreshToken = decodeJwtKey(user.accessToken) as jsonwebtoken.JwtPayload;
+        if (this.authService.checkExpiringJwtKey(decodedRefreshToken)) {
+            return res.status(400)
+                .send({
+                    statusCode: 400,
+                    message: ['You should login again'],
+                    error: 'You should login again',
+                })
+                .end();
+        }
+
+        const newUser = await this.authService.refreshToken(refreshToken);
+        if (newUser) {
             return res.status(200)
+                .setHeader(AUTHORIZATION, newUser.accessToken)
+                .cookie(REFRESH_TOKEN, newUser.refreshToken)
                 .send({
                     statusCode: 200,
                     message: ['Access token is refreshed'],
@@ -69,10 +101,11 @@ export class AuthController {
                 .end();
         }
 
-        return res.send(401)
+        return res.status(400)
             .send({
-                statusCode: 401,
+                statusCode: 400,
                 message: ['You should login again'],
+                error: 'You should login again',
             })
             .end();
     }
@@ -88,7 +121,7 @@ export class AuthController {
         });
 
         response.status(201)
-            .setHeader('Authorization', result.accessToken)
+            .setHeader(AUTHORIZATION, result.accessToken)
             .cookie(REFRESH_TOKEN, result.refreshToken, {
                 httpOnly: true,
             })

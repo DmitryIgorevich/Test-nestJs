@@ -8,6 +8,7 @@ import {
 } from 'express';
 import * as jsonwebtoken from 'jsonwebtoken';
 
+import {decodeJwtKey} from '../../../../system/app/secret.key';
 import {AuthService} from '../../services/auth.serviece';
 
 @Injectable()
@@ -25,34 +26,34 @@ export class AccesssTokenMiddleWare implements NestMiddleware {
         }
 
         const accessToken = req.headers.authorization;
-
         if (!accessToken) {
-            return res.status(401)
+            return res.status(400)
                 .send({
-                    statusCode: 401,
-                    message: ['Some error with access token'],
+                    statusCode: 400,
+                    message: ['Access token not found'],
+                    error: 'Access token not found',
                 })
                 .end();
         }
 
         const user = await this.authService.getUserByAccessToken(accessToken);
-
         if (!user) {
-            return res.status(401)
+            return res.status(400)
                 .send({
-                    statusCode: 401,
-                    message: ['Some error with access token'],
+                    statusCode: 400,
+                    message: ['User not found by access token'],
+                    error: 'User not found by access token',
                 })
                 .end();
         }
 
-        const decodedAccessToken = jsonwebtoken.decode(user.accessToken) as jsonwebtoken.JwtPayload;
-
-        if (decodedAccessToken.exp && Date.now() >= decodedAccessToken.exp) {
+        const decodedAccessToken = decodeJwtKey(user.accessToken) as jsonwebtoken.JwtPayload;
+        if (this.authService.checkExpiringJwtKey(decodedAccessToken)) {
             return res.status(401)
                 .send({
                     statusCode: 401,
-                    message: ['Allowed time is gone'],
+                    message: ['Time is end'],
+                    error: 'Time is end',
                 })
                 .end();
         }
