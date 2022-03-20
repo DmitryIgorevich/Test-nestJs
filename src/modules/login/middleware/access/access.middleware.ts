@@ -20,7 +20,7 @@ export class AccesssTokenMiddleWare implements NestMiddleware {
     }
 
     public async use(req: Request, res: Response, next: (error?: any) => void): Promise<unknown> {
-        if (req.path.includes('registration') || req.path.includes('refresh')) {
+        if (req.path.includes('registration') || req.path.includes('refresh') || req.path.includes('login')) {
             next();
             return;
         }
@@ -36,7 +36,7 @@ export class AccesssTokenMiddleWare implements NestMiddleware {
                 .end();
         }
 
-        const user = await this.authService.getUserByAccessToken(accessToken);
+        const user = await this.authService.getUser({accessToken});
         if (!user) {
             return res.status(400)
                 .send({

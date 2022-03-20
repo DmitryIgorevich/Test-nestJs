@@ -21,7 +21,7 @@ export class AuthTokenMiddleWare implements NestMiddleware {
 
         if (headers.authorization) {
             const authorization = headers.authorization;
-            const result = await this.authService.getUserByAccessToken(authorization);
+            const result = await this.authService.getUser({accessToken: authorization});
 
             if (result) {
                 res.status(200)

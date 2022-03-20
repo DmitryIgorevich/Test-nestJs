@@ -18,7 +18,7 @@ export class UserExistsMiddleWare implements NestMiddleware {
 
     public async use(req: Request, res: Response, next: (error?: any) => void) {
         const data: AuthDTO = req.body;
-        const result = await this.authService.isUserExists(data.login);
+        const result = await this.authService.isUserExists({login: data.login});
 
         if (result) {
             res.status(400)

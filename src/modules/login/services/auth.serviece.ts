@@ -6,6 +6,7 @@ import {
     Response,
 } from 'express';
 import * as jsonwebtoken from 'jsonwebtoken';
+import * as bcrypt from 'bcrypt';
 
 import {
     AuthDTO,
@@ -26,22 +27,53 @@ export class AuthService {
         @InjectModel(AuthDTO.name) private readonly authModel: Model<AuthDTO>,
     ) {}
 
+    public async login(data: IRequestParams<IAuthDTO>): Promise<AuthDTO | null> {
+        const body: IAuthDTO = data.body || data.request?.body;
+        const user = await this.getUser({login: body.login});
+
+        if (!user) {
+            return null;
+        }
+
+        if (!bcrypt.compareSync(body.password, user.password)) {
+            return null;
+        }
+
+        const {password, login} = user;
+        const accessToken = generateJwtKey<Partial<IAuthDTO>>({login, password});
+        const refreshToken = generateJwtKey<Partial<IAuthDTO>>({login, password}, {
+            expiresIn: 1 * 60 * 24 * 7,
+        });
+
+        return await this.authModel.findOneAndUpdate(
+            {login},
+            {refreshToken, accessToken},
+            {new: true},
+        );
+    }
+
     public async register(data: IRequestParams<IAuthDTO>): Promise<AuthDTO> {
         const body: IAuthDTO = data.body || data.request?.body;
 
-        const jwtAccess = generateJwtKey<Partial<IAuthDTO>>(
-            {login: body.login},
-        );
+        const hashedPassword = bcrypt.hashSync(body.password, 10);
+        const jwtAccess = generateJwtKey<Partial<IAuthDTO>>({
+            login: body.login,
+            password: hashedPassword,
+        });
 
-        const jwtRefresh = generateJwtKey<Partial<IAuthDTO>>(
-            {login: body.login}, {
-                expiresIn: 1 * 60 * 24 * 7,
-            },
-        );
+        const jwtRefresh = generateJwtKey<Partial<IAuthDTO>>({
+            login: body.login,
+            password: hashedPassword,
+        }, {
+            expiresIn: 1 * 60 * 24 * 7,
+        });
 
         return await this.authModel.create(
             Object.assign({},
                 body,
+                <Partial<IAuthDTO>>{
+                    password: hashedPassword,
+                },
                 <Partial<AuthDTO>>{
                     accessToken: jwtAccess,
                     refreshToken: jwtRefresh,
@@ -50,12 +82,8 @@ export class AuthService {
         );
     }
 
-    public async isUserExists(login: string): Promise<AuthDTO | null> {
-        return await this.authModel.findOne({login});
-    }
-
-    public async getUserByAccessToken(accessToken: string): Promise<AuthDTO | null> {
-        return await this.authModel.findOne({accessToken});
+    public async isUserExists(data: Partial<AuthDTO>): Promise<boolean> {
+        return !!await this.getUser(data);
     }
 
     public async getUser(data: Partial<AuthDTO>): Promise<AuthDTO | null> {
@@ -65,7 +93,6 @@ export class AuthService {
     public async refreshToken(refreshToken: string): Promise<AuthDTO | null> {
         const user = await this.getUser({refreshToken});
 
-        console.log('refreshToken user', user);
         if (!user) {
             return null;
         }
@@ -79,7 +106,7 @@ export class AuthService {
             },
         );
 
-        const modifiedUser = await this.authModel.findOneAndUpdate(
+        return await this.authModel.findOneAndUpdate(
             {refreshToken},
             {
                 refreshToken: jwtRefresh,
@@ -87,12 +114,6 @@ export class AuthService {
             },
             {new: true},
         );
-
-        console.log('refesh user', user);
-        console.log('refesh modifiedUser', modifiedUser);
-        console.log(modifiedUser === user);
-
-        return modifiedUser;
     }
 
     public checkExpiringJwtKey(decodedAccessToken: jsonwebtoken.JwtPayload): boolean {

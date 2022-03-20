@@ -31,8 +31,32 @@ export class AuthController {
     }
 
     @Post('login')
-    public async loginPost(): Promise<any> {
-        return 1;
+    public async loginPost(
+        @Req() request: Request,
+        @Res() res: Response,
+    ): Promise<any> {
+        const user = await this.authService.login({request});
+
+        if (!user) {
+            return res.status(400)
+                .send({
+                    statusCode: 400,
+                    message: ['Wrong password or login'],
+                    error: 'Wrong password or login',
+                })
+                .end();
+        }
+
+        return res.status(200)
+            .setHeader(AUTHORIZATION, user.accessToken)
+            .cookie(REFRESH_TOKEN, user.refreshToken, {
+                httpOnly: true,
+            })
+            .send({
+                statusCode: 200,
+                message: ['Login is succefully'],
+            })
+            .end();
     }
 
     @Get('login')

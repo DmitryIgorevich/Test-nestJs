@@ -3,7 +3,7 @@ import * as jsonwebtoken from 'jsonwebtoken';
 export const SECRET_KEY = 'SECRET_KEY';
 
 const defaultSettings: jsonwebtoken.SignOptions = {
-    expiresIn: 180,
+    expiresIn: 60 * 3,
 };
 
 export function generateJwtKey<T extends string | Buffer | object>(payload: T, options: jsonwebtoken.SignOptions = defaultSettings): string {
