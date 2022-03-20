@@ -1,1 +1,3 @@
-export const AUTHORIZATION = 'Authorization';
+export enum HEADERS {
+    AUTHORIZATION = 'Authorization'
+}

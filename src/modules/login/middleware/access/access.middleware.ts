@@ -1,6 +1,9 @@
 import {
+    BadRequestException,
+    HttpStatus,
     Injectable,
     NestMiddleware,
+    UnauthorizedException,
 } from '@nestjs/common';
 import {
     Request,
@@ -27,35 +30,29 @@ export class AccesssTokenMiddleWare implements NestMiddleware {
 
         const accessToken = req.headers.authorization;
         if (!accessToken) {
-            return res.status(400)
-                .send({
-                    statusCode: 400,
-                    message: ['Access token not found'],
-                    error: 'Access token not found',
-                })
-                .end();
+            throw new BadRequestException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: ['Access token not found'],
+                error: 'Access token not found',
+            });
         }
 
         const user = await this.authService.getUser({accessToken});
         if (!user) {
-            return res.status(400)
-                .send({
-                    statusCode: 400,
-                    message: ['User not found by access token'],
-                    error: 'User not found by access token',
-                })
-                .end();
+            throw new BadRequestException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: ['User not found by access token'],
+                error: 'User not found by access token',
+            });
         }
 
         const decodedAccessToken = decodeJwtKey(user.accessToken) as jsonwebtoken.JwtPayload;
         if (this.authService.checkExpiringJwtKey(decodedAccessToken)) {
-            return res.status(401)
-                .send({
-                    statusCode: 401,
-                    message: ['Time is end'],
-                    error: 'Time is end',
-                })
-                .end();
+            throw new UnauthorizedException({
+                statusCode: HttpStatus.UNAUTHORIZED,
+                message: ['Time is end'],
+                error: 'Time is end',
+            });
         }
 
         return next();

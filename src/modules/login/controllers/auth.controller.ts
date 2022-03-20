@@ -1,7 +1,10 @@
 import {
+    BadRequestException,
     Body,
     Controller,
     Get,
+    HttpStatus,
+    NotFoundException,
     Post,
     Req,
     Res,
@@ -12,8 +15,8 @@ import {
 } from 'express';
 import * as jsonwebtoken from 'jsonwebtoken';
 
-import {AUTHORIZATION} from '../../../system/app/common-header.names';
-import {REFRESH_TOKEN} from '../../../system/app/common-coockie.names';
+import {HEADERS} from '../../../system/app/common-header.names';
+import {COOCKIE} from '../../../system/app/common-coockie.names';
 import {IAuthDTO} from '../dto/auth';
 
 import {decodeJwtKey} from '../../../system/app/secret.key';
@@ -38,22 +41,20 @@ export class AuthController {
         const user = await this.authService.login({request});
 
         if (!user) {
-            return res.status(400)
-                .send({
-                    statusCode: 400,
-                    message: ['Wrong password or login'],
-                    error: 'Wrong password or login',
-                })
-                .end();
+            throw new BadRequestException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: ['Wrong password or login'],
+                error: 'Wrong password or login',
+            });
         }
 
-        return res.status(200)
-            .setHeader(AUTHORIZATION, user.accessToken)
-            .cookie(REFRESH_TOKEN, user.refreshToken, {
+        return res.status(HttpStatus.OK)
+            .setHeader(HEADERS.AUTHORIZATION, user.accessToken)
+            .cookie(COOCKIE.REFRESH_TOKEN, user.refreshToken, {
                 httpOnly: true,
             })
             .send({
-                statusCode: 200,
+                statusCode: HttpStatus.OK,
                 message: ['Login is succefully'],
             })
             .end();
@@ -65,68 +66,58 @@ export class AuthController {
         @Res() res: Response,
     ): Promise<unknown> {
         if (!req.headers.cookie) {
-            return res.status(400)
-                .send({
-                    statusCode: 400,
-                    message: ['Refresh token not found'],
-                    error: 'Refresh token not found',
-                })
-                .end();
+            throw new NotFoundException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: ['Refresh token not found'],
+                error: 'Refresh token not found',
+            });
         }
 
-        const refreshCoockie = CoockieHelper.findCoockieBy(req.headers.cookie, REFRESH_TOKEN);
-        const refreshToken = CoockieHelper.getCoockieValue(refreshCoockie, REFRESH_TOKEN);
+        const refreshCoockie = CoockieHelper.findCoockieBy(req.headers.cookie, COOCKIE.REFRESH_TOKEN);
+        const refreshToken = CoockieHelper.getCoockieValue(refreshCoockie, COOCKIE.REFRESH_TOKEN);
         if (!refreshToken) {
-            return res.status(400)
-                .send({
-                    statusCode: 400,
-                    message: ['Refresh token not found'],
-                    error: 'Refresh token not found',
-                })
-                .end();
+            throw new NotFoundException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: ['Refresh token not found'],
+                error: 'Refresh token not found',
+            });
         }
 
         const user = await this.authService.getUser({refreshToken});
         if (!user) {
-            return res.status(400)
-                .send({
-                    statusCode: 400,
-                    message: ['User by passed refresh token not found'],
-                    error: 'User by passed refresh token not found',
-                })
-                .end();
+            throw new NotFoundException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: ['User by passed refresh token not found'],
+                error: 'User by passed refresh token not found',
+            });
         }
 
         const decodedRefreshToken = decodeJwtKey(user.accessToken) as jsonwebtoken.JwtPayload;
         if (this.authService.checkExpiringJwtKey(decodedRefreshToken)) {
-            return res.status(400)
-                .send({
-                    statusCode: 400,
-                    message: ['You should login again'],
-                    error: 'You should login again',
-                })
-                .end();
+            throw new BadRequestException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: ['You should login again'],
+                error: 'You should login again',
+            });
         }
 
         const newUser = await this.authService.refreshToken(refreshToken);
         if (newUser) {
-            return res.status(200)
-                .setHeader(AUTHORIZATION, newUser.accessToken)
-                .cookie(REFRESH_TOKEN, newUser.refreshToken)
+            return res.status(HttpStatus.OK)
+                .setHeader(HEADERS.AUTHORIZATION, newUser.accessToken)
+                .cookie(COOCKIE.REFRESH_TOKEN, newUser.refreshToken)
                 .send({
-                    statusCode: 200,
+                    statusCode: HttpStatus.OK,
                     message: ['Access token is refreshed'],
                 })
                 .end();
         }
 
-        return res.status(400)
-            .send({
-                statusCode: 400,
-                message: ['You should login again'],
-                error: 'You should login again',
-            })
-            .end();
+        throw new BadRequestException({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: ['You should login again'],
+            error: 'You should login again',
+        });
     }
 
     @Post('registration')
@@ -139,13 +130,13 @@ export class AuthController {
             body,
         });
 
-        response.status(201)
-            .setHeader(AUTHORIZATION, result.accessToken)
-            .cookie(REFRESH_TOKEN, result.refreshToken, {
+        response.status(HttpStatus.CREATED)
+            .setHeader(HEADERS.AUTHORIZATION, result.accessToken)
+            .cookie(COOCKIE.REFRESH_TOKEN, result.refreshToken, {
                 httpOnly: true,
             })
             .send({
-                statusCode: 201,
+                statusCode: HttpStatus.CREATED,
                 message: [`User ${result.login} is registered`],
             })
             .end();

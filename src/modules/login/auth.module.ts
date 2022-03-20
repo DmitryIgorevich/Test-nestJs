@@ -8,7 +8,6 @@ import {MongooseModule} from '@nestjs/mongoose';
 
 import {AuthController} from './controllers/auth.controller';
 
-import {AuthTokenMiddleWare} from './middleware/auth/auth.middleware';
 import {UserExistsMiddleWare} from './middleware/register/user-exists.middleware';
 import {RegisterRequiredMiddleWare} from './middleware/register/validator-required.middleware';
 import {AccesssTokenMiddleWare} from './middleware/access/access.middleware';
@@ -46,14 +45,6 @@ export class AuthModule implements NestModule {
                 AccesssTokenMiddleWare,
             )
             .forRoutes('auth')
-
-            .apply(
-                AuthTokenMiddleWare,
-            )
-            .forRoutes({
-                path: 'auth/login',
-                method: RequestMethod.GET,
-            })
 
             .apply(
                 RegisterRequiredMiddleWare,

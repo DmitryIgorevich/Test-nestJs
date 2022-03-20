@@ -1,1 +1,3 @@
-export const REFRESH_TOKEN = 'Refresh-token';
+export enum COOCKIE {
+    REFRESH_TOKEN = 'Refresh-token'
+}
