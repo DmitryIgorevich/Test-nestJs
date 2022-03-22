@@ -10,9 +10,9 @@ import {AuthController} from './controllers/auth.controller';
 
 import {UserExistsMiddleWare} from './middleware/register/user-exists.middleware';
 import {RegisterRequiredMiddleWare} from './middleware/register/validator-required.middleware';
-import {AccesssTokenMiddleWare} from './middleware/access/access.middleware';
 
 import {AuthService} from './services/auth.serviece';
+import {AuthGuard} from './guards/auth.guard';
 
 import {
     AuthDTO,
@@ -33,6 +33,7 @@ import {
     ],
     providers: [
         AuthService,
+        AuthGuard,
     ],
     exports: [
     ],
@@ -41,11 +42,6 @@ export class AuthModule implements NestModule {
 
     public configure(consumer: MiddlewareConsumer) {
         consumer
-            .apply(
-                AccesssTokenMiddleWare,
-            )
-            .forRoutes('auth')
-
             .apply(
                 RegisterRequiredMiddleWare,
                 UserExistsMiddleWare,

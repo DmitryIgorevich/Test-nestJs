@@ -16,6 +16,7 @@ const keys: TKeys<AuthDTO> = ['login', 'password'];
 
 @Injectable()
 export class RegisterRequiredMiddleWare implements NestMiddleware {
+
     constructor(
         protected authService: AuthService,
     ) {}

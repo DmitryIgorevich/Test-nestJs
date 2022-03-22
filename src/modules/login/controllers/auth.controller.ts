@@ -5,9 +5,11 @@ import {
     Get,
     HttpStatus,
     NotFoundException,
+    Param,
     Post,
     Req,
     Res,
+    UseGuards,
 } from '@nestjs/common';
 import {
     Request,
@@ -22,6 +24,7 @@ import {IAuthDTO} from '../dto/auth';
 import {decodeJwtKey} from '../../../system/app/secret.key';
 import {AuthService} from '../services/auth.serviece';
 import {CoockieHelper} from '../../../modules/app/helpers/coockie.helper';
+import {AuthGuard} from '../guards/auth.guard';
 
 @Controller({
     path: 'auth',
@@ -142,8 +145,13 @@ export class AuthController {
             .end();
     }
 
-    @Get('test')
-    public async test(): Promise<any> {
+    @Get('test/:id')
+    @UseGuards(AuthGuard)
+    public async test(
+        @Param() id: number,
+    ): Promise<any> {
+        console.log(id);
         return 1;
     }
+
 }

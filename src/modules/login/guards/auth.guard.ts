@@ -1,32 +1,26 @@
 import {
     BadRequestException,
+    CanActivate,
+    ExecutionContext,
     HttpStatus,
     Injectable,
-    NestMiddleware,
     UnauthorizedException,
 } from '@nestjs/common';
-import {
-    Request,
-    Response,
-} from 'express';
+import {Request} from 'express';
 import * as jsonwebtoken from 'jsonwebtoken';
 
-import {decodeJwtKey} from '../../../../system/app/secret.key';
-import {AuthService} from '../../services/auth.serviece';
+import {decodeJwtKey} from '../../../system/app/secret.key';
+import {AuthService} from '../services/auth.serviece';
 
 @Injectable()
-export class AccesssTokenMiddleWare implements NestMiddleware {
+export class AuthGuard implements CanActivate {
 
     constructor(
         private readonly authService: AuthService,
-    ) {
-    }
+    ) {}
 
-    public async use(req: Request, res: Response, next: (error?: any) => void): Promise<unknown> {
-        if (req.path.includes('registration') || req.path.includes('refresh') || req.path.includes('login')) {
-            next();
-            return;
-        }
+    public async canActivate(context: ExecutionContext): Promise<boolean> {
+        const req = context.switchToHttp().getRequest<Request>();
 
         const accessToken = req.headers.authorization;
         if (!accessToken) {
@@ -55,6 +49,6 @@ export class AccesssTokenMiddleWare implements NestMiddleware {
             });
         }
 
-        return next();
+        return true;
     }
 }
