@@ -35,5 +35,6 @@
         "noImplicitAny": true,
         "noImplicitOverride": true,
         "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": false,
     },
 }

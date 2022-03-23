@@ -4,6 +4,8 @@ import {
     SchemaFactory,
 } from '@nestjs/mongoose';
 
+import {UserDTO} from '../../../modules/user/dto/user.dto';
+
 export interface IAuthDTO {
     password: string;
     login: string;
@@ -22,6 +24,9 @@ export class AuthDTO implements IAuthDTO {
 
     @Prop()
     public refreshToken: string;
+
+    @Prop()
+    public userInfo: UserDTO;
 }
 
 export const AuthSchema = SchemaFactory.createForClass(AuthDTO);

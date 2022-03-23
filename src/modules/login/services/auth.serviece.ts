@@ -1,10 +1,6 @@
 import {Model} from 'mongoose';
 import {Injectable} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
-import {
-    Request,
-    Response,
-} from 'express';
 import * as jsonwebtoken from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 
@@ -13,22 +9,22 @@ import {
     IAuthDTO,
 } from '../dto/auth';
 import {generateJwtKey} from '../../../system/app/secret.key';
-
-export interface IRequestParams<T> {
-    response?: Response;
-    request?: Request;
-    body?: T;
-}
+import {UserService} from '../../../modules/user/services/user.service';
+import {
+    IUserDTO,
+    UserDTO,
+} from '../../../modules/user/dto/user.dto';
 
 @Injectable()
 export class AuthService {
 
     constructor(
-        @InjectModel(AuthDTO.name) private readonly authModel: Model<AuthDTO>,
+        @InjectModel(AuthDTO.name)
+        private readonly authModel: Model<AuthDTO>,
+        private readonly userService: UserService,
     ) {}
 
-    public async login(data: IRequestParams<IAuthDTO>): Promise<AuthDTO | null> {
-        const body: IAuthDTO = data.body || data.request?.body;
+    public async login(body: IAuthDTO): Promise<AuthDTO | null> {
         const user = await this.getUser({login: body.login});
 
         if (!user) {
@@ -52,34 +48,37 @@ export class AuthService {
         );
     }
 
-    public async register(data: IRequestParams<IAuthDTO>): Promise<AuthDTO> {
-        const body: IAuthDTO = data.body || data.request?.body;
-
+    public async register(body: IAuthDTO & IUserDTO): Promise<AuthDTO> {
         const hashedPassword = bcrypt.hashSync(body.password, 10);
         const jwtAccess = generateJwtKey<Partial<IAuthDTO>>({
             login: body.login,
             password: hashedPassword,
         });
 
-        const jwtRefresh = generateJwtKey<Partial<IAuthDTO>>({
-            login: body.login,
-            password: hashedPassword,
-        }, {
-            expiresIn: 1 * 60 * 24 * 7,
-        });
-
-        return await this.authModel.create(
-            Object.assign({},
-                body,
-                <Partial<IAuthDTO>>{
-                    password: hashedPassword,
-                },
-                <Partial<AuthDTO>>{
-                    accessToken: jwtAccess,
-                    refreshToken: jwtRefresh,
-                },
-            ),
+        const jwtRefresh = generateJwtKey<Partial<IAuthDTO>>(
+            {
+                login: body.login,
+                password: hashedPassword,
+            },
+            {
+                expiresIn: 1 * 60 * 24 * 7,
+            },
         );
+
+        const userInfo: UserDTO = await this.userService.createUserInfo(body);
+
+        return await this.authModel.create(Object.assign(
+            {},
+            body,
+            <Partial<IAuthDTO>>{
+                password: hashedPassword,
+            },
+            <Partial<AuthDTO>>{
+                accessToken: jwtAccess,
+                refreshToken: jwtRefresh,
+                userInfo,
+            },
+        ));
     }
 
     public async isUserExists(data: Partial<AuthDTO>): Promise<boolean> {

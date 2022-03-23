@@ -4,36 +4,20 @@ import {
     NestModule,
     RequestMethod,
 } from '@nestjs/common';
-import {MongooseModule} from '@nestjs/mongoose';
 
+import {SharedModule} from '../shared/shared.module';
 import {AuthController} from './controllers/auth.controller';
-
 import {UserExistsMiddleWare} from './middleware/register/user-exists.middleware';
 import {RegisterRequiredMiddleWare} from './middleware/register/validator-required.middleware';
 
-import {AuthService} from './services/auth.serviece';
-import {AuthGuard} from './guards/auth.guard';
-
-import {
-    AuthDTO,
-    AuthSchema,
-} from './dto/auth';
-
 @Module({
     imports: [
-        MongooseModule.forFeature([
-            {
-                name: AuthDTO.name,
-                schema: AuthSchema,
-            },
-        ]),
+        SharedModule,
     ],
     controllers: [
-        AuthController,
     ],
     providers: [
-        AuthService,
-        AuthGuard,
+        AuthController,
     ],
     exports: [
     ],

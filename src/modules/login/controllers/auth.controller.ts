@@ -5,7 +5,6 @@ import {
     Get,
     HttpStatus,
     NotFoundException,
-    Param,
     Post,
     Req,
     Res,
@@ -25,6 +24,7 @@ import {decodeJwtKey} from '../../../system/app/secret.key';
 import {AuthService} from '../services/auth.serviece';
 import {CoockieHelper} from '../../../modules/app/helpers/coockie.helper';
 import {AuthGuard} from '../guards/auth.guard';
+import {IUserDTO} from '../../../modules/user/dto/user.dto';
 
 @Controller({
     path: 'auth',
@@ -33,15 +33,14 @@ export class AuthController {
 
     constructor(
         private readonly authService: AuthService,
-    ) {
-    }
+    ) {}
 
     @Post('login')
     public async loginPost(
         @Req() request: Request,
         @Res() res: Response,
     ): Promise<any> {
-        const user = await this.authService.login({request});
+        const user = await this.authService.login(request.body);
 
         if (!user) {
             throw new BadRequestException({
@@ -90,8 +89,8 @@ export class AuthController {
         if (!user) {
             throw new NotFoundException({
                 statusCode: HttpStatus.BAD_REQUEST,
-                message: ['User by passed refresh token not found'],
-                error: 'User by passed refresh token not found',
+                message: ['User not found'],
+                error: 'User not found',
             });
         }
 
@@ -126,21 +125,28 @@ export class AuthController {
     @Post('registration')
     public async register(
         @Res() response: Response,
-        @Body() body: IAuthDTO,
+        @Body() body: IAuthDTO & IUserDTO,
     ): Promise<void> {
-        const result = await this.authService.register({
-            response,
-            body,
-        });
+        const authDto = await this.authService.register(body);
+        const {firstName, lastName, sex} = authDto.userInfo;
+
+        const result: Partial<IAuthDTO & IUserDTO> = {
+            login: authDto.login,
+            password: body.password,
+            firstName,
+            lastName,
+            sex,
+        };
 
         response.status(HttpStatus.CREATED)
-            .setHeader(HEADERS.AUTHORIZATION, result.accessToken)
-            .cookie(COOCKIE.REFRESH_TOKEN, result.refreshToken, {
+            .setHeader(HEADERS.AUTHORIZATION, authDto.accessToken)
+            .cookie(COOCKIE.REFRESH_TOKEN, authDto.refreshToken, {
                 httpOnly: true,
             })
             .send({
                 statusCode: HttpStatus.CREATED,
                 message: [`User ${result.login} is registered`],
+                data: result,
             })
             .end();
     }
@@ -148,10 +154,11 @@ export class AuthController {
     @Get('test/:id')
     @UseGuards(AuthGuard)
     public async test(
-        @Param() id: number,
+        @Req() req: Request,
+        @Res() res: Response,
     ): Promise<any> {
-        console.log(id);
-        return 1;
+
+        res.end();
     }
 
 }
