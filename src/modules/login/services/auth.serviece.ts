@@ -5,26 +5,23 @@ import * as jsonwebtoken from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 
 import {
-    AuthDTO,
-    IAuthDTO,
-} from '../dto/auth';
-import {generateJwtKey} from '../../../system/app/secret.key';
-import {UserService} from '../../../modules/user/services/user.service';
-import {
     IUserDTO,
     UserDTO,
-} from '../../../modules/user/dto/user.dto';
+} from '../dto/user';
+import {generateJwtKey} from '../../../system/app/secret.key';
+import {AbstractUserService} from '../../../system/abstract/abstract.user.service';
 
 @Injectable()
-export class AuthService {
+export class AuthService extends AbstractUserService {
 
     constructor(
-        @InjectModel(AuthDTO.name)
-        private readonly authModel: Model<AuthDTO>,
-        private readonly userService: UserService,
-    ) {}
+        @InjectModel(UserDTO.name)
+            authModel: Model<UserDTO>,
+    ) {
+        super(authModel);
+    }
 
-    public async login(body: IAuthDTO): Promise<AuthDTO | null> {
+    public async login(body: IUserDTO): Promise<UserDTO | null> {
         const user = await this.getUser({login: body.login});
 
         if (!user) {
@@ -36,8 +33,8 @@ export class AuthService {
         }
 
         const {password, login} = user;
-        const accessToken = generateJwtKey<Partial<IAuthDTO>>({login, password});
-        const refreshToken = generateJwtKey<Partial<IAuthDTO>>({login, password}, {
+        const accessToken = generateJwtKey<Partial<IUserDTO>>({login, password});
+        const refreshToken = generateJwtKey<Partial<IUserDTO>>({login, password}, {
             expiresIn: 1 * 60 * 24 * 7,
         });
 
@@ -48,14 +45,14 @@ export class AuthService {
         );
     }
 
-    public async register(body: IAuthDTO & IUserDTO): Promise<AuthDTO> {
+    public async register(body: IUserDTO) {
         const hashedPassword = bcrypt.hashSync(body.password, 10);
-        const jwtAccess = generateJwtKey<Partial<IAuthDTO>>({
+        const jwtAccess = generateJwtKey<Partial<IUserDTO>>({
             login: body.login,
             password: hashedPassword,
         });
 
-        const jwtRefresh = generateJwtKey<Partial<IAuthDTO>>(
+        const jwtRefresh = generateJwtKey<Partial<IUserDTO>>(
             {
                 login: body.login,
                 password: hashedPassword,
@@ -65,41 +62,33 @@ export class AuthService {
             },
         );
 
-        const userInfo: UserDTO = await this.userService.createUserInfo(body);
-
         return await this.authModel.create(Object.assign(
             {},
             body,
-            <Partial<IAuthDTO>>{
+            <Partial<UserDTO>>{
                 password: hashedPassword,
-            },
-            <Partial<AuthDTO>>{
                 accessToken: jwtAccess,
                 refreshToken: jwtRefresh,
-                userInfo,
             },
         ));
     }
 
-    public async isUserExists(data: Partial<AuthDTO>): Promise<boolean> {
+    public async isUserExists(data: Partial<UserDTO>): Promise<boolean> {
         return !!await this.getUser(data);
     }
 
-    public async getUser(data: Partial<AuthDTO>): Promise<AuthDTO | null> {
-        return await this.authModel.findOne(data);
-    }
-
-    public async refreshToken(refreshToken: string): Promise<AuthDTO | null> {
+    public async refreshToken(refreshToken: string): Promise<UserDTO | null> {
         const user = await this.getUser({refreshToken});
 
         if (!user) {
             return null;
         }
 
-        const jwtAccess = generateJwtKey<Partial<IAuthDTO>>(
+        const jwtAccess = generateJwtKey<Partial<IUserDTO>>(
             {login: user.login},
         );
-        const jwtRefresh = generateJwtKey<Partial<IAuthDTO>>(
+
+        const jwtRefresh = generateJwtKey<Partial<IUserDTO>>(
             {login: user.login}, {
                 expiresIn: 1 * 60 * 24 * 7,
             },
@@ -107,7 +96,7 @@ export class AuthService {
 
         return await this.authModel.findOneAndUpdate(
             {refreshToken},
-            {
+            <Partial<UserDTO>>{
                 refreshToken: jwtRefresh,
                 accessToken: jwtAccess,
             },

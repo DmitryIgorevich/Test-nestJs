@@ -7,7 +7,7 @@ import {
     Response,
 } from 'express';
 
-import {AuthDTO} from '../../dto/auth';
+import {IUserDTO} from '../../dto/user';
 import {AuthService} from '../../services/auth.serviece';
 
 @Injectable()
@@ -17,7 +17,7 @@ export class UserExistsMiddleWare implements NestMiddleware {
     ) {}
 
     public async use(req: Request, res: Response, next: (error?: any) => void) {
-        const data: AuthDTO = req.body;
+        const data: IUserDTO = req.body;
         const result = await this.authService.isUserExists({login: data.login});
 
         if (result) {

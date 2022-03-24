@@ -9,10 +9,10 @@ import {
 
 import {TKeys} from '../../../../system/types';
 
-import {AuthDTO} from '../../dto/auth';
+import {IUserDTO} from '../../dto/user';
 import {AuthService} from '../../services/auth.serviece';
 
-const keys: TKeys<AuthDTO> = ['login', 'password'];
+const keys: TKeys<IUserDTO> = ['login', 'password'];
 
 @Injectable()
 export class RegisterRequiredMiddleWare implements NestMiddleware {
@@ -22,7 +22,7 @@ export class RegisterRequiredMiddleWare implements NestMiddleware {
     ) {}
 
     public async use(req: Request, res: Response, next: (error?: any) => void) {
-        const body: AuthDTO = req.body;
+        const body: IUserDTO = req.body;
         const errorsFields: string[] = [];
         let error = false;
 

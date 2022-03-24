@@ -4,6 +4,7 @@ import {
     Get,
     HttpStatus,
     NotFoundException,
+    Patch,
     Req,
     Res,
     UseGuards,
@@ -13,9 +14,9 @@ import {
     Response,
 } from 'express';
 
-import {AuthService} from '../../../modules/login/services/auth.serviece';
 import {AuthGuard} from '../../../modules/login/guards/auth.guard';
-import {IUser} from '../../../modules/shared/types/types';
+import {IUserDTO, UserDTO} from '../../../modules/login/dto/user';
+import {UserService} from '../services/user.service';
 
 @Controller({
     path: 'user',
@@ -23,7 +24,7 @@ import {IUser} from '../../../modules/shared/types/types';
 export class UserController {
 
     constructor(
-        protected readonly authService: AuthService,
+        protected readonly userService: UserService,
     ) {}
 
     @Get('info')
@@ -31,7 +32,7 @@ export class UserController {
     public async getInfo(
         @Req() request: Request,
         @Res() response: Response,
-    ): Promise<unknown> {
+    ): Promise<void> {
         const authorization = request.headers.authorization;
         if (!authorization) {
             throw new BadRequestException({
@@ -41,7 +42,7 @@ export class UserController {
             });
         }
 
-        const user = await this.authService.getUser({accessToken: authorization});
+        const user = await this.userService.getUser({accessToken: authorization});
         if (!user) {
             throw new NotFoundException({
                 statusCode: HttpStatus.BAD_REQUEST,
@@ -50,18 +51,69 @@ export class UserController {
             });
         }
 
-        const {firstName, lastName, sex} = user.userInfo;
-        const data: Partial<IUser> = {
-            login: user.login,
+        const {login, firstName, lastName, sex, _id} = user;
+        const data: Partial<IUserDTO> = {
+            login,
             firstName,
             lastName,
             sex,
+            id: _id,
         };
 
-        return response.status(HttpStatus.OK)
+        response.status(HttpStatus.OK)
             .send({
                 statusCode: HttpStatus.OK,
                 message: ['ok'],
+                data,
+            })
+            .end();
+    }
+
+    @Patch('info')
+    @UseGuards(AuthGuard)
+    public async patchInfo(
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const accessToken = request.headers.authorization;
+        if (!accessToken) {
+            throw new BadRequestException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: ['No access token'],
+                error: 'No access token',
+            });
+        }
+
+        const user = await this.userService.getUserData({accessToken});
+        if (!user) {
+            throw new BadRequestException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: ['User not found by access token'],
+                error: 'User not found by access token',
+            });
+        }
+
+        const updatedUser = await this.userService.patchUser(user, request.body);
+        if (!updatedUser) {
+            throw new BadRequestException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: ['User not found by access token'],
+                error: 'User not found by access token',
+            });
+        }
+
+        const data: Partial<IUserDTO> = {
+            firstName: updatedUser.firstName,
+            lastName: updatedUser.lastName,
+            login: updatedUser.login,
+            sex: updatedUser.sex,
+            id: updatedUser._id,
+        };
+
+        response.status(HttpStatus.OK)
+            .send({
+                statusCode: HttpStatus.OK,
+                message: ['User is updated'],
                 data,
             })
             .end();

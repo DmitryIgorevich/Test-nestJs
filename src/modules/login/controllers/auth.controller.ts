@@ -18,13 +18,12 @@ import * as jsonwebtoken from 'jsonwebtoken';
 
 import {HEADERS} from '../../../system/app/common-header.names';
 import {COOCKIE} from '../../../system/app/common-coockie.names';
-import {IAuthDTO} from '../dto/auth';
+import {IAuthDTO, IUserDTO} from '../dto/user';
 
 import {decodeJwtKey} from '../../../system/app/secret.key';
 import {AuthService} from '../services/auth.serviece';
 import {CoockieHelper} from '../../../modules/app/helpers/coockie.helper';
 import {AuthGuard} from '../guards/auth.guard';
-import {IUserDTO} from '../../../modules/user/dto/user.dto';
 
 @Controller({
     path: 'auth',
@@ -40,13 +39,14 @@ export class AuthController {
         @Req() request: Request,
         @Res() res: Response,
     ): Promise<any> {
-        const user = await this.authService.login(request.body);
+        const body: IAuthDTO = request.body;
+        const user = await this.authService.login(body);
 
         if (!user) {
             throw new BadRequestException({
                 statusCode: HttpStatus.BAD_REQUEST,
-                message: ['Wrong password or login'],
-                error: 'Wrong password or login',
+                message: [`User ${body.login} is not registered`],
+                error: 'User is not registered',
             });
         }
 
@@ -125,28 +125,27 @@ export class AuthController {
     @Post('registration')
     public async register(
         @Res() response: Response,
-        @Body() body: IAuthDTO & IUserDTO,
+        @Body() body: IAuthDTO,
     ): Promise<void> {
-        const authDto = await this.authService.register(body);
-        const {firstName, lastName, sex} = authDto.userInfo;
+        const result = await this.authService.register(body);
 
-        const result: Partial<IAuthDTO & IUserDTO> = {
-            login: authDto.login,
-            password: body.password,
-            firstName,
-            lastName,
-            sex,
+        const data: Partial<IUserDTO> = {
+            firstName: result.firstName,
+            lastName: result.lastName,
+            sex: result.sex,
+            login: result.login,
+            id: result._id,
         };
 
         response.status(HttpStatus.CREATED)
-            .setHeader(HEADERS.AUTHORIZATION, authDto.accessToken)
-            .cookie(COOCKIE.REFRESH_TOKEN, authDto.refreshToken, {
+            .setHeader(HEADERS.AUTHORIZATION, result.accessToken)
+            .cookie(COOCKIE.REFRESH_TOKEN, result.refreshToken, {
                 httpOnly: true,
             })
             .send({
                 statusCode: HttpStatus.CREATED,
                 message: [`User ${result.login} is registered`],
-                data: result,
+                data,
             })
             .end();
     }

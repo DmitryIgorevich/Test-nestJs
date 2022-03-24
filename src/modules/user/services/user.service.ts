@@ -5,23 +5,25 @@ import {Model} from 'mongoose';
 import {
     IUserDTO,
     UserDTO,
-} from '../dto/user.dto';
+} from '../../login/dto/user';
+import {AbstractUserService} from '../../../system/abstract/abstract.user.service';
 
 @Injectable()
-export class UserService {
+export class UserService extends AbstractUserService {
 
     constructor(
         @InjectModel(UserDTO.name)
-        private readonly userModel: Model<UserDTO>,
-    ) {}
+            userModel: Model<UserDTO>,
+    ) {
+        super(userModel);
+    }
 
-    public async createUserInfo(data: IUserDTO): Promise<UserDTO> {
-        const values = {...data};
+    public async patchUser(findUser: UserDTO, data: IUserDTO) {
+        const newData: Partial<IUserDTO> = Object.assign({}, data);
+        delete newData.password;
 
-        if (data.sex !== 'female' && data.sex !== 'mail') {
-            values.sex = undefined;
-        }
-
-        return await this.userModel.create(values);
+        return await this.authModel.findOneAndUpdate(findUser, newData, {
+            new: true,
+        });
     }
 }
